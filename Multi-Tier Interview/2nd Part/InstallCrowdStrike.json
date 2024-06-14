@@ -1,0 +1,51 @@
+{
+    "schemaVersion": "2.2",
+    "description": "Install and configure CrowdStrike Falcon Sensor",
+    "mainSteps": [
+      {
+        "action": "aws:runCommand",
+        "name": "InstallCrowdStrike",
+        "inputs": {
+          "DocumentName": "AWS-RunShellScript",
+          "Parameters": {
+            "runtime": "python3.8",
+            "workingDirectory": "/tmp",
+            "timeoutSeconds": "3600",
+            "commands": [
+              "#!/bin/bash",
+              "set -e",
+              "# Check for platform compatibility",
+              "if [[ $(uname -r) == *\"el7\"* ]]; then",
+              "  echo 'RHEL/CentOS 7 detected'",
+              "else",
+              "  echo 'Unsupported platform detected, exiting'",
+              "  exit 1",
+              "fi",
+              "# Install curl if not already installed",
+              "if ! command -v curl &> /dev/null; then",
+              "  yum install -y curl",
+              "fi",
+              "# Download the CrowdStrike Falcon Sensor",
+              "curl -O https://download.crowdstrike.com/releases/agent/falcon-sensor-5.38.0-6005.el7.x86_64.rpm",
+              "# Install the Falcon Sensor",
+              "rpm -i falcon-sensor-5.38.0-6005.el7.x86_64.rpm",
+              "# Retrieve the CrowdStrike API key from Secrets Manager",
+              "api_key=$(aws secretsmanager get-secret-value --secret-id CrowdStrikeApiKey --query SecretString --output text)",
+              "if [ -z \"$api_key\" ]; then",
+              "  echo 'Failed to retrieve API key from Secrets Manager, exiting'",
+              "  exit 1",
+              "fi",
+              "# Configure the Falcon Sensor with the retrieved API key",
+              "/opt/CrowdStrike/falconctl -s -t \"$api_key\"",
+              "# Start the Falcon Sensor",
+              "systemctl start falcon-sensor",
+              "# Enable the Falcon Sensor to start on boot",
+              "systemctl enable falcon-sensor",
+              "echo 'CrowdStrike Falcon Sensor installation and configuration completed successfully'"
+            ]
+          }
+        }
+      }
+    ]
+  }
+  

@@ -1,0 +1,116 @@
+This document I think that wasn't needed but I felt that it would help to leave a proposal for the subneting needed in this case, it's not a very detailed division of subnets since maybe some zone could be samller due to less scalability needed.
+
+- VPC CIDR Block: 10.0.0.0/16
+- Availability Zones: Assume eu-south-2a, eu-south-2b, eu-south-2c
+
+Subnet Configuration
+Divide the VPC into multiple subnets, each serving a specific purpose, they are distributed across different AZs for redundancy.
+
+Public Subnets
+Used for internet-facing components such as the Application Load Balancer (ALB) and Bastion Hosts.
+
+    Subnet 1 (Public, eu-south-2a): 10.0.1.0/24
+    Subnet 2 (Public, eu-south-2b): 10.0.2.0/24
+    Subnet 3 (Public, eu-south-2c): 10.0.3.0/24
+
+Private Subnets
+Used for application servers and backend services. These subnets do not have direct internet access.
+
+    Subnet 4 (Private, eu-south-2a): 10.0.4.0/24
+    Subnet 5 (Private, eu-south-2b): 10.0.5.0/24
+    Subnet 6 (Private, eu-south-2c): 10.0.6.0/24
+
+Database Subnets
+Isolated subnets specifically for the RDS instances to enhance security.
+
+    Subnet 7 (DB, eu-south-2a): 10.0.7.0/24
+    Subnet 8 (DB, eu-south-2b): 10.0.8.0/24
+    Subnet 9 (DB, eu-south-2c): 10.0.9.0/24
+
+Logging and Management Subnets
+Used for centralized logging, monitoring, and management services.
+
+    Subnet 10 (Logging, eu-south-2a): 10.0.10.0/24
+    Subnet 11 (Logging, eu-south-2b): 10.0.11.0/24
+    Subnet 12 (Logging, eu-south-2c): 10.0.12.0/24
+
+Route Tables
+Configure route tables to control traffic flow between subnets and to the internet.
+
+Public Route Table
+    - Attached to: Public Subnets (1, 2, 3)
+    - Routes:
+        Local VPC: 10.0.0.0/16
+        Internet Gateway: 0.0.0.0/0 (via Internet Gateway)
+
+Private Route Table
+    - Attached to: Private Subnets (4, 5, 6)
+    - Routes:
+        Local VPC: 10.0.0.0/16
+        NAT Gateway: 0.0.0.0/0 (via NAT Gateway in Public Subnets)
+
+Database Route Table
+    - Attached to: Database Subnets (7, 8, 9)
+    - Routes:
+        Local VPC: 10.0.0.0/16
+
+Logging Route Table
+    - Attached to: Logging Subnets (10, 11, 12)
+    - Routes:
+        Local VPC: 10.0.0.0/16
+
+
+Security Groups
+
+1. ALB Security Group:
+
+    Inbound: HTTP (80), HTTPS (443) from 0.0.0.0/0
+    Outbound: Allow all
+
+2. App Server Security Group:
+
+    Inbound: HTTP (80), HTTPS (443) from ALB SG, SSH (22) from Bastion SG
+    Outbound: Allow all
+
+3. Database Security Group:
+
+    Inbound: MySQL/Aurora (3306) from App Server SG
+    Outbound: Allow all
+
+4. Bastion Security Group:
+
+    Inbound: SSH (22) from trusted IP range
+    Outbound: Allow all
+
+Network ACLs
+
+1. Public Subnets NACL:
+
+    Inbound: Allow HTTP (80), HTTPS (443), and SSH (22)
+    Outbound: Allow all
+
+2. Private Subnets NACL:
+
+    Inbound: Allow HTTP (80), HTTPS (443), and MySQL (3306)
+    Outbound: Allow all
+
+3. Database Subnets NACL:
+
+    Inbound: Allow MySQL (3306) from private subnets
+    Outbound: Allow all
+
+Network Flow
+1. Inbound Traffic:
+
+    Traffic enters the VPC through the ALB, which is in the public subnets.
+    The ALB forwards traffic to the application servers in the private subnets.
+
+2. Application Tier to Database Tier:
+
+    Application servers communicate with the RDS instances in the database subnets.
+    This communication is restricted by security groups to allow only the necessary traffic.
+
+3. Outbound Traffic:
+
+    Instances in the private subnets access the internet via the NAT Gateway for updates and patches.
+    Logging and monitoring data are sent to CloudWatch from all instances and services.

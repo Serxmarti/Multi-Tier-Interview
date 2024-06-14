@@ -1,0 +1,20 @@
+To deploy a new security tool to every EC2 instance in an enterprise-level platform, I would recommend an AWS native tool, AWS Systems Manager (SSM), it integrates well with AWS Secrets Manager for securely managing sensitive information.
+
+Steps for Deployment
+
+1. Set up AWS Systems Manager (SSM):
+    - Ensure that the SSM Agent is installed and running on all EC2 instances.
+    - Attach the necessary IAM roles to EC2 instances to allow SSM operations.
+
+2. Store sensitive information in AWS Secrets Manager:
+    - Store the security agent's license key, API key, or any other sensitive configuration data in AWS Secrets Manager with this command.
+        aws secretsmanager create-secret --name CrowdStrikeApiKey --secret-string "YOUR_API_KEY"
+
+3. Create a Systems Manager Document (SSM Document):
+    - Define the commands and scripts needed to install and configure the security agent and save the JSON content to a file named InstallCrowdStrike.json (example attached).
+    - Use Systems Manager Run Command:
+        aws ssm create-document --name "InstallCrowdStrike" --document-type "Command" --content file://InstallCrowdStrike.json
+
+4. Execute the SSM Document across all targeted EC2 instances.
+    - Use the SSM Run Command to execute the document on all target EC2 instances. Adjust the --targets parameter to match your instance tagging strategy.
+        aws ssm send-command --document-name "InstallCrowdStrike" --targets "Key=tag:Name,Values=your-instance-tag" --comment "Installing CrowdStrike Falcon Sensor"
