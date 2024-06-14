@@ -1,70 +1,86 @@
-Setup Instructions
-    - Clone the Repository:
+# Setup Instructions
 
-        git clone <repository-url>
-        cd <repository-directory>
+- Clone the Repository:
 
-    - Edit Variables (Optional):
-        If needed, edit the variables.tf file to set the default values for your environment. Alternatively, you can create a terraform.tfvars file to set the variable values.
+    ```bash
+    git clone <repository-url>
+    cd <repository-directory>
+    ```
 
-Deployment
+- Edit Variables (Optional):
+    If needed, edit the `variables.tf` file to set the default values for your environment. Alternatively, you can create a `terraform.tfvars` file to set the variable values.
 
-    1. Initialize the Terraform Configuration:
+# Deployment
 
-        terraform init
+1. Initialize the Terraform Configuration:
 
-    2. Apply the Configuration:
+    ```bash
+    terraform init
+    ```
+
+2. Apply the Configuration:
+    
+    ```bash
+    terraform apply
+    ```
+
+    - Provide the required variable values when prompted, such as `vpc_id`, `public_subnet_ids`, `private_subnet_ids`, `db_username`, `db_password`, `key_name`, and `instance_type`.
+    - Alternatively, create a `terraform.tfvars` file with the following content:
+
+        ```hcl
+        vpc_id             = "vpc-xxxxxx"
+        public_subnet_ids  = ["subnet-xxxxxx", "subnet-xxxxxx"]
+        private_subnet_ids = ["subnet-xxxxxx", "subnet-xxxxxx"]
+        db_username        = "your-db-username"
+        db_password        = "your-db-password"
+        key_name           = "your-key-pair-name"
+        instance_type      = "t2.micro"
+        ```
+
+3. Verify the Outputs:
+    
+    After the apply completes, Terraform will output important information such as the public DNS of the web server, RDS endpoint, S3 bucket names, CloudWatch log group name, and SNS topic ARN.
+
+# Testing the Deployment
+
+1. Access the Application:
+
+    - Obtain the DNS name of the web server from the Terraform outputs:
         
-        terraform apply
+        ```bash
+        terraform output web_server_public_dns
+        ```
 
-        - Provide the required variable values when prompted, such as vpc_id, public_subnet_ids, private_subnet_ids, db_username, db_password, key_name, and instance_type.
-        - Alternatively, create a terraform.tfvars file with the following content:
-
-            vpc_id           = "vpc-xxxxxx"
-            public_subnet_ids = ["subnet-xxxxxx", "subnet-xxxxxx"]
-            private_subnet_ids = ["subnet-xxxxxx", "subnet-xxxxxx"]
-            db_username      = "your-db-username"
-            db_password      = "your-db-password"
-            key_name         = "your-key-pair-name"
-            instance_type    = "t2.micro"
-
-    3. Verify the Outputs:
+    - Open a web browser and navigate to the provided DNS name to verify the application is running.
     
-        After the apply completes, Terraform will output important information such as the public DNS of the web server, RDS endpoint, S3 bucket names, CloudWatch log group name, and SNS topic ARN.
+2. SSH into EC2 Instances:
 
-Testing the Deployment
-    
-    1. Access the Application:
+    - Use the key pair to SSH into the EC2 instances if needed for further testing or configuration:
+        
+        ```bash
+        ssh -i <key-pair-file>.pem ec2-user@<ec2-instance-public-dns>
+        ```
 
-        - Obtain the DNS name of the web server from the Terraform outputs:
-            
-            terraform output web_server_public_dns
+# Monitoring and Logging
 
-        - Open a web browser and navigate to the provided DNS name to verify the application is running.
-    
-    2.  SSH into EC2 Instances:
+1. CloudWatch Alarms:
+    - Alarms are configured for unauthorized access attempts, bucket policy changes, and unusual data access patterns in the S3 bucket.
+    - Verify alarms in the CloudWatch console and check for notifications in the configured SNS topic.
 
-        - Use the key pair to SSH into the EC2 instances if needed for further testing or configuration:
-            ssh -i <key-pair-file>.pem ec2-user@<ec2-instance-public-dns>
+2. Access Logs:
+    - S3 bucket logs are stored in the `my-logging-bucket` bucket specified in the configuration.
+    - Access logs are written with the prefix `access-logs/`.
 
-Monitoring and Logging
+3. EC2 and RDS Logs:
+    - EC2 instance logs are collected by the CloudWatch agent and can be viewed in the CloudWatch Logs console.
+    - RDS logs (error, general, slow query) are also exported to CloudWatch Logs.
 
-    1. CloudWatch Alarms:
-        - Alarms are configured for unauthorized access attempts, bucket policy changes, and unusual data access patterns in the S3 bucket.
-        - Verify alarms in the CloudWatch console and check for notifications in the configured SNS topic.
-
-    2. Access Logs:
-        - S3 bucket logs are stored in the my-logging-bucket bucket specified in the configuration.
-        - Access logs are written with the prefix access-logs/.
-
-    3. EC2 and RDS Logs:
-        - EC2 instance logs are collected by the CloudWatch agent and can be viewed in the CloudWatch Logs console.
-        - RDS logs (error, general, slow query) are also exported to CloudWatch Logs.
-
-Cleanup
+# Cleanup
 
 To clean up the resources created by this deployment, run the following command:
 
-    terraform destroy
+```bash
+terraform destroy
+```
 
 This command will remove all the resources created by the Terraform configuration, including EC2 instances, RDS database, S3 buckets, IAM roles, and CloudWatch alarms.
